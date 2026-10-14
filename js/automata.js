@@ -1,6 +1,14 @@
 import { Estado } from './estado.js';
 import { Transicion } from './transicion.js';
 
+export const EPSILON = 'ε';
+
+// Aceptamos las dos notaciones habituales, pero almacenamos una sola.
+export function normalizarSimbolo(simbolo) {
+    const limpio = String(simbolo ?? '').trim();
+    return limpio === 'λ' || limpio.toLowerCase() === 'epsilon' ? EPSILON : limpio;
+}
+
 export class Automata {
     constructor() {
         this.estados = [];
@@ -51,6 +59,10 @@ export class Automata {
     // ---------- Transiciones ----------
 
     agregarTransicion(desde, hacia, simbolo) {
+        simbolo = normalizarSimbolo(simbolo);
+        if (!simbolo || !this.buscarEstado(desde) || !this.buscarEstado(hacia)) {
+            return false;
+        }
         const existe = this.transiciones.some(
             t => t.desde === desde && t.hacia === hacia && t.simbolo === simbolo
         );
@@ -79,12 +91,13 @@ export class Automata {
         calcularAlfabeto() {
         // Si el usuario declaró Σ explícitamente, respetarla
         if (this.alfabeto && this.alfabeto.length > 0) {
-            return [...this.alfabeto].sort();
+            return [...new Set(this.alfabeto.map(normalizarSimbolo)
+                .filter(simbolo => simbolo && simbolo !== EPSILON))].sort();
         }
         // Si no, derivarla de las transiciones
         const simbolos = new Set();
         this.transiciones.forEach(t => {
-            if (t.simbolo !== 'ε') simbolos.add(t.simbolo);
+            if (t.simbolo !== EPSILON) simbolos.add(t.simbolo);
         });
         return [...simbolos].sort();
     }

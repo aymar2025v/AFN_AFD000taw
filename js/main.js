@@ -353,8 +353,9 @@ function aplicarQ(listaIds) {
 }
 
 btnAplicarConfig.addEventListener('click', () => {
-    const alfabeto = parsearLista(inputAlfabeto.value);
-    const estados  = parsearLista(inputEstados.value);
+    const alfabeto = [...new Set(parsearLista(inputAlfabeto.value)
+        .filter(simbolo => simbolo !== 'λ' && simbolo !== 'ε' && simbolo.toLowerCase() !== 'epsilon'))];
+    const estados  = [...new Set(parsearLista(inputEstados.value))];
 
     if (alfabeto.length > 0) {
         nfa.alfabeto = alfabeto;
@@ -366,6 +367,8 @@ btnAplicarConfig.addEventListener('click', () => {
         aplicarQ(estados);
     }
 
+    inputAlfabeto.value = alfabeto.join(', ');
+    inputEstados.value = estados.join(', ');
     ui.actualizar();
 });
 

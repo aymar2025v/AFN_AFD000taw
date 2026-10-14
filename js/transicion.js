@@ -110,7 +110,10 @@ export function dibujarTransiciones(ctx, transiciones, buscarEstado) {
             pt = dibujarFlechaRecta(ctx, origen, destino);
         }
 
-        dibujarEtiqueta(ctx, g.simbolos.join(', '), pt.x, pt.y);
+        // Internamente ε representa la transición vacía; en el lienzo la
+        // mostramos como λ, que es la notación solicitada en el editor.
+        const etiqueta = g.simbolos.map(s => s === 'ε' ? 'λ' : s).join(', ');
+        dibujarEtiqueta(ctx, etiqueta, pt.x, pt.y);
         posiciones.push({ desde: g.desde, hacia: g.hacia, x: pt.x, y: pt.y });
     });
 

@@ -41,7 +41,7 @@ function claveDeConjunto(ids) {
 
 // Nombre visible del estado del DFA a partir de su clave
 function nombrarConjunto(clave) {
-    return '{' + clave + '}';
+    return clave ? '{' + clave + '}' : '∅';
 }
 
 // Radio apropiado según la longitud del nombre (para que el texto quepa)
@@ -113,18 +113,11 @@ export function convertirNFAaDFA(nfa) {
         for (const simbolo of alfabeto) {
             const alcanzables = mover(nfa, conjunto, simbolo);
 
-            if (alcanzables.size === 0) {
-                paso.porSimbolo.push({
-                    simbolo,
-                    mover: [],
-                    clausura: [],
-                    destino: null,
-                    esNuevo: false,
-                });
-                continue;
-            }
-
-            const clausura = epsilonClausura(nfa, alcanzables);
+            // Un DFA completo debe definir una transición por cada símbolo.
+            // Cuando mover(S,a)=∅, se crea/usa el estado muerto ∅.
+            const clausura = alcanzables.size === 0
+                ? new Set()
+                : epsilonClausura(nfa, alcanzables);
             const clave = claveDeConjunto(clausura);
 
             let idDestino = mapaConjuntos.get(clave);
@@ -138,7 +131,7 @@ export function convertirNFAaDFA(nfa) {
                     x: 0, y: 0,
                     radio: radioParaLabel(idDestino),
                     inicial: false,
-                    final: [...clausura].some(id => nfa.buscarEstado(id).final),
+                    final: [...clausura].some(id => nfa.buscarEstado(id)?.final),
                 });
                 mapaConjuntos.set(clave, idDestino);
                 pendientes.push({ conjunto: clausura, idDFA: idDestino });

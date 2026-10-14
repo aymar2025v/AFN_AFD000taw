@@ -73,8 +73,10 @@ export function configurarInteraccion({ canvas, automata, redibujar, vista }) {
             overlay.innerHTML = `
                 <div id="modalSimbolo" class="min-w-[300px] rounded-2xl bg-white px-6 py-5 shadow-2xl ring-1 ring-slate-200">
                     <label class="mb-2 block text-sm font-bold text-slate-700">${textoInvitacion}</label>
-                    <input type="text" id="inputSimbolo" value="${valorInicial}" class="mb-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200" />
+                    <input type="text" id="inputSimbolo" value="${valorInicial}" class="mb-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-base outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200" />
+                    <p class="mb-4 text-xs text-slate-500">Escribe un símbolo o usa λ (también se acepta ε). λ no pertenece al alfabeto Σ.</p>
                     <div class="botones flex justify-end gap-2">
+                        <button class="secundario rounded-lg bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 transition hover:bg-sky-100" id="btnLambda" type="button">λ</button>
                         <button class="secundario rounded-lg bg-slate-100 px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-200" id="btnCancelar">Cancelar</button>
                         <button class="primario rounded-lg bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition hover:bg-emerald-600" id="btnAceptar">Aceptar</button>
                     </div>
@@ -88,6 +90,7 @@ export function configurarInteraccion({ canvas, automata, redibujar, vista }) {
 
             overlay.querySelector('#btnAceptar').addEventListener('click', () => cerrar(input.value));
             overlay.querySelector('#btnCancelar').addEventListener('click', () => cerrar(null));
+            overlay.querySelector('#btnLambda').addEventListener('click', () => cerrar('λ'));
             input.addEventListener('keydown', e => {
                 if (e.key === 'Enter')  cerrar(input.value);
                 if (e.key === 'Escape') cerrar(null);
