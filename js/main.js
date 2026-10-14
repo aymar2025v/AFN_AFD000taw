@@ -1,7 +1,7 @@
 import { Automata } from './automata.js';
 import { dibujarTransiciones } from './transicion.js';
 // import { configurarInteraccion } from './interaccion.js';
-import { convertirNFAaDFA, aplicarLayoutCircular } from './nfa-a-dfa.js';
+import { convertirNFAaDFA, eliminarTransicionesLambda, aplicarLayoutCircular } from './nfa-a-dfa.js';
 import { minimizarDFA } from './dfa-minimizado.js';
 import { Vista } from './vista.js';
 import { configurarInteraccion, configurarVistaYArrastre } from './interaccion.js';
@@ -9,6 +9,7 @@ import { construirDFACompleto, layoutPorCapas } from './potencias.js';
 import { validarCadena } from './validacion.js';
 
 const canvasNFA     = document.getElementById('miCanvas');
+const canvasAFND    = document.getElementById('canvasAFND');
 const canvasDFA     = document.getElementById('canvasDFA');
 const canvasDFAMin  = document.getElementById('canvasDFAMin');
 const canvasPotencia = document.getElementById('canvasPotencia');
@@ -22,10 +23,11 @@ function prepararCanvas(canvas) {
 }
 
 const dimensionesCanvas = new Map(
-    [canvasNFA, canvasDFA, canvasDFAMin, canvasPotencia]
+    [canvasNFA, canvasAFND, canvasDFA, canvasDFAMin, canvasPotencia]
         .map(canvas => [canvas, prepararCanvas(canvas)])
 );
 const ctxNFA        = canvasNFA.getContext('2d');
+const ctxAFND       = canvasAFND.getContext('2d');
 const ctxDFA        = canvasDFA.getContext('2d');
 const ctxDFAMin     = canvasDFAMin.getContext('2d');
 
@@ -42,6 +44,7 @@ const btnValidar      = document.getElementById('btnValidar');
 const resultadoValidacion = document.getElementById('resultadoValidacion');
 
 const vistaNFA    = new Vista(canvasNFA);
+const vistaAFND   = new Vista(canvasAFND);
 const vistaDFA    = new Vista(canvasDFA);
 const vistaDFAMin = new Vista(canvasDFAMin);
 
@@ -88,11 +91,21 @@ const ui = configurarInteraccion({
 
 // Habilita zoom + arrastre en el canvas del DFA y del DFA minimizado.
 // (Se usa `let` para poder reasignar los redibujadores cuando el DFA cambie.)
+let redibujarAFND = () => {};
 let redibujarDFA = () => {};
 let redibujarDFAMin = () => {};
 
 let dfaPotencia = null;
 let redibujarPotencia = () => {};
+
+configurarVistaYArrastre({
+    canvas: canvasAFND,
+    automata: {
+        buscarEstadoEnPunto: (x, y) => afnd ? afnd.buscarEstadoEnPunto(x, y) : null,
+    },
+    redibujar: () => redibujarAFND(),
+    vista: vistaAFND,
+});
 
 configurarVistaYArrastre({
     canvas: canvasDFA,
@@ -123,11 +136,13 @@ configurarVistaYArrastre({
 });
 
 // ---------- Estado del pipeline ----------
+let afnd = null;
 let dfa = null;
 let dfaMin = null;
 
 const configuracionesCanvas = new Map([
     [canvasNFA, { vista: vistaNFA, automata: () => nfa }],
+    [canvasAFND, { vista: vistaAFND, automata: () => afnd }],
     [canvasDFA, { vista: vistaDFA, automata: () => dfa }],
     [canvasDFAMin, { vista: vistaDFAMin, automata: () => dfaMin }],
     [canvasPotencia, { vista: vistaPotencia, automata: () => dfaPotencia }],
@@ -163,6 +178,7 @@ function encuadrarCanvas(canvas) {
 
 function redibujarTodosLosCanvas() {
     ui.actualizar();
+    redibujarAFND();
     redibujarDFA();
     redibujarDFAMin();
     redibujarPotencia();
@@ -170,8 +186,16 @@ function redibujarTodosLosCanvas() {
 
 btnConvertir.addEventListener('click', () => {
     try {
-        // ---------- 1. NFA → DFA (subconjuntos) ----------
-        const { dfa: nuevoDFA, calculos } = convertirNFAaDFA(nfa);
+        // ---------- 1. AFND-λ → AFND (eliminar λ) ----------
+        afnd = eliminarTransicionesLambda(nfa);
+        const dimensionesAFND = dimensionesCanvas.get(canvasAFND);
+        aplicarLayoutCircular(afnd, dimensionesAFND.width, dimensionesAFND.height);
+        vistaAFND.reset();
+        redibujarAFND = () => dibujarAutomata(ctxAFND, vistaAFND, afnd);
+        redibujarAFND();
+
+        // ---------- 2. AFND → DFA (subconjuntos) ----------
+        const { dfa: nuevoDFA, calculos } = convertirNFAaDFA(afnd);
         dfa = nuevoDFA;
         const dimensionesDFA = dimensionesCanvas.get(canvasDFA);
         aplicarLayoutCircular(dfa, dimensionesDFA.width, dimensionesDFA.height);
@@ -182,7 +206,7 @@ btnConvertir.addEventListener('click', () => {
 
         renderizarTabla(calculos);
 
-        // ---------- 2. DFA → DFA minimizado ----------
+        // ---------- 3. DFA → DFA minimizado ----------
         const { dfa: nuevoMin, correspondencia } = minimizarDFA(dfa);
         dfaMin = nuevoMin;
         const dimensionesDFAMin = dimensionesCanvas.get(canvasDFAMin);
@@ -194,9 +218,9 @@ btnConvertir.addEventListener('click', () => {
 
         renderizarTablaMinimizada(correspondencia);
 
-        // ---------- 3. Conjunto potencia completo (2^n) ----------
+        // ---------- 4. Conjunto potencia completo (2^n) ----------
         try {
-            dfaPotencia = construirDFACompleto(nfa);
+            dfaPotencia = construirDFACompleto(afnd);
             const dimensionesPotencia = dimensionesCanvas.get(canvasPotencia);
             layoutPorCapas(dfaPotencia, dimensionesPotencia.width, dimensionesPotencia.height);
             vistaPotencia.reset();

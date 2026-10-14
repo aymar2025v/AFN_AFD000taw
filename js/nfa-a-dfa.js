@@ -49,6 +49,46 @@ function radioParaLabel(label) {
     return Math.max(38, Math.min(120, label.length * 7));
 }
 
+// ---------- Eliminación de transiciones λ ----------
+
+// Construye un AFND equivalente sin transiciones vacías.
+// δ'(p,a) = ε-clausura(mover(ε-clausura({p}), a)).
+export function eliminarTransicionesLambda(afndLambda) {
+    const afnd = new Automata();
+    const alfabeto = afndLambda.calcularAlfabeto();
+    const finalesOriginales = new Set(afndLambda.estadosFinales().map(e => e.id));
+
+    afnd.alfabeto = [...alfabeto];
+
+    // Un estado es final si desde él se alcanza un final usando solo λ.
+    afndLambda.estados.forEach(estado => {
+        const clausura = epsilonClausura(afndLambda, [estado.id]);
+        afnd.agregarEstado({
+            id: estado.id,
+            x: estado.x,
+            y: estado.y,
+            radio: estado.radio,
+            inicial: estado.inicial,
+            final: [...clausura].some(id => finalesOriginales.has(id)),
+        });
+    });
+
+    afndLambda.estados.forEach(estado => {
+        const clausuraOrigen = epsilonClausura(afndLambda, [estado.id]);
+        alfabeto.forEach(simbolo => {
+            const destinos = epsilonClausura(
+                afndLambda,
+                mover(afndLambda, clausuraOrigen, simbolo)
+            );
+            destinos.forEach(destino => {
+                afnd.agregarTransicion(estado.id, destino, simbolo);
+            });
+        });
+    });
+
+    return afnd;
+}
+
 // ---------- Conversión ----------
 
 export function convertirNFAaDFA(nfa) {

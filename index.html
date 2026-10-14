@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NFA → DFA · Editor y Conversión</title>
+    <title>AFND-λ → AFND → AFD · Editor y Conversión</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-sky-50 font-sans text-slate-700 antialiased">
@@ -12,11 +12,11 @@
     <header class="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div class="mx-auto flex max-w-[1320px] flex-wrap items-center justify-between gap-4 px-5 py-4">
             <div>
-                <h1 class="text-xl font-extrabold tracking-tight text-slate-800">NFA <span class="text-sky-500">→</span> DFA</h1>
-                <p class="text-sm text-slate-500">Editor de autómatas, conversión por subconjuntos y minimización</p>
+                <h1 class="text-xl font-extrabold tracking-tight text-slate-800">AFND-λ <span class="text-sky-500">→</span> AFND <span class="text-sky-500">→</span> AFD</h1>
+                <p class="text-sm text-slate-500">Elimina λ, convierte por subconjuntos y minimiza</p>
             </div>
             <div id="controles" class="flex gap-2">
-                <button id="btnConvertir" class="rounded-lg bg-sky-500 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-300 active:scale-95">Convertir a DFA</button>
+                <button id="btnConvertir" class="rounded-lg bg-sky-500 px-5 py-2.5 font-semibold text-white shadow-sm transition hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-300 active:scale-95">Convertir</button>
             </div>
         </div>
     </header>
@@ -36,15 +36,23 @@
             <button id="btnAplicarConfig" class="primario rounded-lg bg-emerald-500 px-5 py-2 font-semibold text-white shadow-sm transition hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-300 active:scale-95">Aplicar</button>
         </div>
 
-        <!-- Cuatro paneles de canvas: NFA, DFA, DFA minimizado, Potencia -->
+        <!-- Paneles de canvas: AFND-λ, AFND, DFA, DFA minimizado y potencia -->
         <div id="canvas-container" class="grid w-full grid-cols-1 gap-5 md:grid-cols-2">
         <section class="canvas-panel group flex flex-col rounded-2xl bg-white p-4 shadow-md ring-1 ring-slate-200 transition hover:shadow-lg [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:bg-slate-100 [&:fullscreen]:p-4">
             <div class="relative mb-2 flex min-h-[28px] items-center justify-center">
-                <h2 class="text-base font-bold tracking-wide text-slate-700">NFA</h2>
-                <button class="boton-pantalla-completa absolute right-0 rounded-md bg-slate-700 px-2 py-1 text-lg leading-none text-white transition hover:bg-slate-900" type="button" aria-label="Ver NFA en pantalla completa" title="Ver en pantalla completa">⛶</button>
+                <h2 class="text-base font-bold tracking-wide text-slate-700">AFND-λ (editable)</h2>
+                <button class="boton-pantalla-completa absolute right-0 rounded-md bg-slate-700 px-2 py-1 text-lg leading-none text-white transition hover:bg-slate-900" type="button" aria-label="Ver AFND-λ en pantalla completa" title="Ver en pantalla completa">⛶</button>
             </div>
             <p class="canvas-ayuda mb-2 min-h-[1em] text-center text-xs text-slate-400">Clic en dos estados: transición · λ: no consume símbolo · Rueda: zoom · Arrastra para mover</p>
             <canvas id="miCanvas" width="480" height="420" class="block h-auto w-full cursor-grab touch-none select-none rounded-lg bg-white ring-1 ring-slate-200 group-[&:fullscreen]:h-full group-[&:fullscreen]:min-h-0 group-[&:fullscreen]:flex-1 group-[&:fullscreen]:object-contain"></canvas>
+        </section>
+        <section class="canvas-panel group flex flex-col rounded-2xl bg-white p-4 shadow-md ring-1 ring-slate-200 transition hover:shadow-lg [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:bg-slate-100 [&:fullscreen]:p-4">
+            <div class="relative mb-2 flex min-h-[28px] items-center justify-center">
+                <h2 class="text-base font-bold tracking-wide text-slate-700">AFND (sin λ)</h2>
+                <button class="boton-pantalla-completa absolute right-0 rounded-md bg-slate-700 px-2 py-1 text-lg leading-none text-white transition hover:bg-slate-900" type="button" aria-label="Ver AFND sin λ en pantalla completa" title="Ver en pantalla completa">⛶</button>
+            </div>
+            <p class="canvas-ayuda mb-2 min-h-[1em] text-center text-xs text-slate-400">Resultado equivalente tras eliminar las transiciones λ</p>
+            <canvas id="canvasAFND" width="480" height="420" class="block h-auto w-full cursor-grab touch-none select-none rounded-lg bg-white ring-1 ring-slate-200 group-[&:fullscreen]:h-full group-[&:fullscreen]:min-h-0 group-[&:fullscreen]:flex-1 group-[&:fullscreen]:object-contain"></canvas>
         </section>
         <section class="canvas-panel group flex flex-col rounded-2xl bg-white p-4 shadow-md ring-1 ring-slate-200 transition hover:shadow-lg [&:fullscreen]:h-screen [&:fullscreen]:w-screen [&:fullscreen]:rounded-none [&:fullscreen]:bg-slate-100 [&:fullscreen]:p-4">
             <div class="relative mb-2 flex min-h-[28px] items-center justify-center">
@@ -86,14 +94,14 @@
 
         <!-- Tablas: conversión NFA → DFA y correspondencia minimizada -->
         <section id="tablaConversion" class="w-full">
-            <h2 class="mb-4 text-center text-xl font-bold tracking-wide text-slate-700">Tabla de conversión NFA → DFA</h2>
+            <h2 class="mb-4 text-center text-xl font-bold tracking-wide text-slate-700">Tabla de conversión AFND → AFD</h2>
             <div id="tablaContenido" class="overflow-x-auto rounded-2xl bg-white p-5 shadow-md ring-1 ring-slate-200">
                 <p class="vacio m-0 text-center italic text-slate-400">Presiona "Convertir a DFA" para ver los cálculos.</p>
             </div>
         </section>
     </main>
 
-    <footer class="py-6 text-center text-xs text-slate-400">Editor de autómatas finitos · NFA → DFA → DFA mínimo</footer>
+    <footer class="py-6 text-center text-xs text-slate-400">Editor de autómatas finitos · AFND-λ → AFND → AFD mínimo</footer>
 
     <!-- Punto de entrada (ES modules) -->
     <script type="module" src="js/main.js"></script>
